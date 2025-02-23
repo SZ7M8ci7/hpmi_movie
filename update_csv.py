@@ -68,7 +68,7 @@ def get_victory_count(url):
     options = Options()
     options.headless = True  # ヘッドレスモードで実行
 
-    options.add_argument('--user-data-dir=ttttmp')
+    options.add_argument('--headless')
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=options)
     # URLにアクセス
