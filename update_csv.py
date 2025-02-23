@@ -91,7 +91,7 @@ def get_victory_count(url):
     return theater_name,battle_results
     
 def get_theater_list():
-
+    shinjuku_9 = {'/voting-status/cinema/#N9C6B00698036': '/voting-status/cinema/#N9C6B006CB0AB'}
     response = requests.get('https://hypnosismic-movie.com/voting-status/')
     response.encoding = 'utf-8'  # 文字エンコーディングを指定
     html_data = response.text
@@ -103,7 +103,7 @@ def get_theater_list():
         for prefecture in prefectures:
             ul_tag = soup.find('ul', class_='theater--' + prefecture)
             if ul_tag:
-                links = [a['href'] for a in ul_tag.find_all('a', href=True)]
+                links = [shinjuku_9.get(a['href'], a['href']) for a in ul_tag.find_all('a', href=True)]
                 theater_links[prefecture] = links
         regions_links[region] = theater_links
     return regions_links
