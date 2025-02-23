@@ -115,6 +115,9 @@ th:nth-child(n+4), td:nth-child(n+4) {
             tbody.innerHTML = '';
             
             data.forEach((row, index) => {
+                if (row == ''){
+                    return;
+                }
                 const tr = document.createElement('tr');
                 row.slice(0, 2).forEach(cell => {
                     const td = document.createElement('td');
