@@ -109,8 +109,7 @@ th:nth-child(n+4), td:nth-child(n+4) {
         
         function processCSV(csvText) {
             const rows = csvText.split('\n').map(row => row.split(','));
-            const headers = rows[0];
-            const data = rows.slice(1).filter(row => row.length === headers.length);
+            const data = rows;
             
             const tbody = document.querySelector('#dataTable tbody');
             tbody.innerHTML = '';
