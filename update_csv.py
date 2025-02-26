@@ -1,4 +1,5 @@
 from collections import defaultdict
+import re
 import time
 from bs4 import BeautifulSoup
 import requests
@@ -7,7 +8,6 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 import chromedriver_binary
-
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
     'Referer': 'https://hypnosismic-movie.com',
@@ -63,6 +63,25 @@ japan_prefectures = {
     "yamanashi": "山梨"
 }
 
+def count_distinct(data):
+    entries = re.split(r'(\d{4}\.\d{2}\.\d{2})', data)[1:]
+    past_data_str = ""
+    battle_results_distinct = defaultdict(int)
+    for i in range(0, len(entries), 2):
+        date = entries[i].strip()
+        match_data = entries[i + 1].strip()
+        # Splitting match data based on teams (assuming teams have non-numeric names)
+        match_entries = re.findall(r'([^\d%]+)([\d%]+)', match_data)
+
+        for team, scores in match_entries:
+            scores = [str(x.strip('%')) for x in scores.split('%') if x]
+            if past_data_str == "".join([date, team.strip()] + scores):
+                continue
+            past_data_str = "".join([date, team.strip()] + scores)
+            battle_results_distinct[team.strip()] += 1
+    print(battle_results_distinct)
+    return battle_results_distinct
+
 def get_victory_count(url):
     
     options = Options()
@@ -83,12 +102,15 @@ def get_victory_count(url):
 
     # バトル結果を取得
     battle_results = defaultdict(int)
+    battle_results_distinct = defaultdict(int)
     battle_blocks = soup.find_all('div', class_='battles--list')
+    
     for battle in battle_blocks:
+        battle_results_distinct = count_distinct(battle.text)
         for division in divisions:
             battle_results[division] = battle.text.count(division)
-
-    return theater_name,battle_results
+    print(battle_results)
+    return theater_name,battle_results,battle_results_distinct
     
 def get_theater_list():
     shinjuku_9 = {'/voting-status/cinema/#N9C6B00698036': '/voting-status/cinema/#N9C6B006CB0AB'}
@@ -111,12 +133,17 @@ regions_links = get_theater_list()
 import csv
 
 output_file = "battle_results.csv"
-
+output_distinct = []
 with open(output_file, mode="w", newline="", encoding="utf-8") as file:
     writer = csv.writer(file)
     for region, prefectures in regions_links.items():
         for prefecture, links in prefectures.items():
             for link in links:
                 time.sleep(1)
-                theater_name,battle_results = get_victory_count(link)
+                theater_name,battle_results,battle_results_distinct = get_victory_count(link)
                 writer.writerow([japan_prefectures[region], japan_prefectures[prefecture], theater_name] + [battle_results.get(division, 0) for division in divisions] + [link])
+                output_distinct.append([japan_prefectures[region], japan_prefectures[prefecture], theater_name] + [battle_results_distinct.get(division, 0) for division in divisions] + [link])
+
+with open("battle_results_distinct.csv", mode="w", newline="", encoding="utf-8") as file:
+    writer = csv.writer(file)
+    writer.writerows(output_distinct)
