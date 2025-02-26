@@ -23,7 +23,7 @@ regions = {
     "chugokushikoku": ["okayama", "hiroshima", "ehime", "kochi"],
     "kyushuokinawa": ["fukuoka", "kumamoto", "okinawa"]
 }
-divisions = ["Buster Bros!!!","MAD TRIGGER CREW","Fling Posse","麻天狼","どついたれ本舗","Bad Ass Temple","中王区"]
+divisions = ["Buster Bros!!!","MAD TRIGGER CREW","Fling Posse","麻天狼","どついたれ本舗","Bad Ass Temple","言の葉党"]
 # 英語表記と日本語表記の対応辞書
 japan_prefectures = {
     "aichi": "愛知",
