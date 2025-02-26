@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-L89VN353J5"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-L89VN353J5');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勝利データ</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <style>
+        table{
+        width: 100%;
+        border-collapse:separate;
+        border-spacing: 0;
+        
+        }
+
+        table th:first-child{
+        border-radius: 5px 0 0 0;
+        }
+
+        table th:last-child{
+        border-radius: 0 5px 0 0;
+        border-right: 1px solid #3c6690;
+        }
+
+        table th{
+        text-align: center;
+        color:white;
+        background: linear-gradient(#829ebc,#225588);
+        border-left: 1px solid #3c6690;
+        border-top: 1px solid #3c6690;
+        border-bottom: 1px solid #3c6690;
+        box-shadow: 0px 1px 1px rgba(255,255,255,0.3) inset;
+        width: 25%;
+        padding: 0% 0;
+        }
+
+        table td{
+        text-align: center;
+        border-left: 1px solid #a8b7c5;
+        border-bottom: 1px solid #a8b7c5;
+        border-top:none;
+        box-shadow: 0px -3px 5px 1px #eee inset;
+        width: 25%;
+        padding: 0% 0;
+        }
+
+        table td:last-child{
+        border-right: 1px solid #a8b7c5;
+        }
+
+        table tr:last-child td:first-child {
+        border-radius: 0 0 0 5px;
+        }
+
+        table tr:last-child td:last-child {
+        border-radius: 0 0 5px 0;
+        }
+        /* チーム名を縦書きにする */
+        .team-name {
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    overflow: hidden;
+    word-break: break-all; /* ← 長い単語を強制的に折り返し */
+    padding: 5px;
+}
+th:nth-child(n+4), td:nth-child(n+4) {
+    width: 50px; /* ← 5列目以降を固定 */
+}
+
+    </style>
+</head>
+<body>
+    重複削除データ ※公式のデータ不具合により、同じ上映の結果が2回カウントされている事象を確認しているので、全ての投票率が全く同じ結果のデータをカウントから除外したバージョンです。重複が正しい可能性もあるため、この表が正しいとは限りません。
+    <table border="1" id="dataTable">
+        <thead>
+            <tr>
+                <th>地域</th>
+                <th>都道府県</th>
+                <th>劇場</th>
+                <th>勝率グラフ</th>
+                <th class="team-name">イケブクロ</th>
+                <th class="team-name">ヨコハマ</th>
+                <th class="team-name">シブヤ</th>
+                <th class="team-name">シンジュク</th>
+                <th class="team-name">オオサカ</th>
+                <th class="team-name">ナゴヤ</th>
+                <th class="team-name">中王区</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    
+    <script>
+        function fetchCSV() {
+            fetch('battle_results_distinct.csv')
+                .then(response => response.text())
+                .then(text => processCSV(text));
+        }
+        
+        function processCSV(csvText) {
+            const rows = csvText.split('\n').map(row => row.split(','));
+            const data = rows;
+            
+            const tbody = document.querySelector('#dataTable tbody');
+            tbody.innerHTML = '';
+            
+            data.forEach((row, index) => {
+                if (row == ''){
+                    return;
+                }
+                const tr = document.createElement('tr');
+                row.slice(0, 2).forEach(cell => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    tr.appendChild(td);
+                });
+                const td = document.createElement('td');
+                td.innerHTML = '<a href="https://hypnosismic-movie.com' + row[10] + '" target="_blank">' + row[2] + '</a>';
+
+                tr.appendChild(td);
+                const totalWins = Number(row[3]) + Number(row[4]) + Number(row[5]) + Number(row[6]) + Number(row[7]) + Number(row[8]) + Number(row[9]);
+                const winA = totalWins ? Math.floor(Number(row[3]) / totalWins * 100) : 0;
+                const winB = totalWins ? Math.floor(Number(row[4]) / totalWins * 100) : 0;
+                const winC = totalWins ? Math.floor(Number(row[5]) / totalWins * 100) : 0;
+                const winD = totalWins ? Math.floor(Number(row[6]) / totalWins * 100) : 0;
+                const winE = totalWins ? Math.floor(Number(row[7]) / totalWins * 100) : 0;
+                const winF = totalWins ? Math.floor(Number(row[8]) / totalWins * 100) : 0;
+                const winG = totalWins ? Math.floor(Number(row[9]) / totalWins * 100) : 0;
+                
+                const canvas = document.createElement('canvas');
+                canvas.id = 'chart' + index;
+                canvas.width = 300;
+                canvas.height = 50;
+                
+                const tdChart = document.createElement('td');
+                tdChart.appendChild(canvas);
+                tr.appendChild(tdChart);
+                tbody.appendChild(tr);
+                
+                setTimeout(() => {
+                    const ctx = document.getElementById('chart' + index).getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: [''],
+                            datasets: [
+                                { data: [winA], backgroundColor: '#ff0000', borderWidth: 1 },
+                                { data: [winB], backgroundColor: '#0043ff', borderWidth: 1 },
+                                { data: [winC], backgroundColor: '#ffc700', borderWidth: 1 },
+                                { data: [winD], backgroundColor: '#a8a8a8', borderWidth: 1 },
+                                { data: [winE], backgroundColor: '#ff5f00', borderWidth: 1 },
+                                { data: [winF], backgroundColor: '#73399a', borderWidth: 1 },
+                                { data: [winG], backgroundColor: '#ff0081', borderWidth: 1 }
+                            ]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            layout: { padding: 0 },  // ← 余白を完全にゼロに
+                            scales: {
+                                x: { display: false, stacked: true },
+                                y: { stacked: true, display: false } // ← Y軸を完全削除
+                            },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { enabled: false },
+                                datalabels: {
+                                    anchor: 'center',
+                                    align: 'center',
+                                    color: 'white',
+                                    font: { weight: 'bold' },
+                                    formatter: (value) => value > 0 ? value + '%' : ''
+                                }
+                            },
+                            elements: {
+                                bar: {
+                                    barThickness: 'flex',  // ← バーの厚さを自動調整
+                                    categoryPercentage: 1.0,  // ← カテゴリ間の余白を削減
+                                    barPercentage: 1.0 // ← バーの余白を最小化
+                                }
+                            }
+                        },
+                        plugins: [ChartDataLabels]
+                    });
+                }, 100);
+                
+                row.slice(3, 10).forEach(cell => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    tr.appendChild(td);
+                });
+            });
+        }
+        
+        window.onload = fetchCSV;
+    </script>
+</body>
+</html>
