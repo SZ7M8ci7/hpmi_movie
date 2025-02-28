@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import Counter, defaultdict
 import re
 import time
 from bs4 import BeautifulSoup
@@ -94,23 +94,34 @@ def get_victory_count(url):
     driver.get('https://hypnosismic-movie.com' + url)
     time.sleep(3)
     html_data = driver.page_source
-    driver.quit()
     # BeautifulSoupでHTMLを解析
     soup = BeautifulSoup(html_data, 'html.parser')
     # 劇場名を取得
     theater_name = soup.find('p', class_='theater--name').get_text(strip=True)
+    # すべての要素を取得
+    elements = driver.find_elements("css selector", "*")
 
-    # バトル結果を取得
-    battle_results = defaultdict(int)
-    battle_results_distinct = defaultdict(int)
-    battle_blocks = soup.find_all('div', class_='battles--list')
+    # 疑似要素 `::before` の content を取得
+    content_list = []
+    for element in elements:
+        content = driver.execute_script(
+            "return window.getComputedStyle(arguments[0], '::before').content;", element
+        )
+        if content and content != 'none':  # 無効なものは除外
+            content = content.strip('"')  # 余分な `" "` を削除
+
+            # Unicode 制御文字の正規表現
+            control_chars_pattern = re.compile(r'[\u200b-\u200f\u2060-\u206f]')
+
+            # 制御文字を削除
+            content = control_chars_pattern.sub('', content)
+            content_list.append(content)
+
+    # 出現回数をカウント
+    content_counts = Counter(content_list)
     
-    for battle in battle_blocks:
-        battle_results_distinct = count_distinct(battle.text)
-        for division in divisions:
-            battle_results[division] = battle.text.count(division)
-    print(battle_results)
-    return theater_name,battle_results,battle_results_distinct
+    driver.quit()
+    return theater_name,content_counts
     
 def get_theater_list():
     shinjuku_9 = {'/voting-status/cinema/#N9C6B00698036': '/voting-status/cinema/#N9C6B006CB0AB'}
@@ -133,17 +144,12 @@ regions_links = get_theater_list()
 import csv
 
 output_file = "battle_results.csv"
-output_distinct = []
 with open(output_file, mode="w", newline="", encoding="utf-8") as file:
     writer = csv.writer(file)
     for region, prefectures in regions_links.items():
         for prefecture, links in prefectures.items():
             for link in links:
                 time.sleep(1)
-                theater_name,battle_results,battle_results_distinct = get_victory_count(link)
+                theater_name,battle_results = get_victory_count(link)
                 writer.writerow([japan_prefectures[region], japan_prefectures[prefecture], theater_name] + [battle_results.get(division, 0) for division in divisions] + [link])
-                output_distinct.append([japan_prefectures[region], japan_prefectures[prefecture], theater_name] + [battle_results_distinct.get(division, 0) for division in divisions] + [link])
-
-with open("battle_results_distinct.csv", mode="w", newline="", encoding="utf-8") as file:
-    writer = csv.writer(file)
-    writer.writerows(output_distinct)
+                
