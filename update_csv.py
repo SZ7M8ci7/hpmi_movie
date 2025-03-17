@@ -74,13 +74,20 @@ japan_prefectures = {
 }
 # 7種類のテンプレート画像のパスを設定
 template_paths = [
-    "Buster Bros!!!.png",
-    "MAD TRIGGER CREW.png",
-    "Fling Posse.png",
-    "麻天狼.png",
-    "どついたれ本舗.png",
-    "Bad Ass Temple.png",
-    "言の葉党.png",
+    'chuou1.png'
+    ,'chuou2.png'
+    ,'ikebukuro1.png'
+    ,'ikebukuro2.png'
+    ,'nagoya1.png'
+    ,'nagoya2.png'
+    ,'osaka1.png'
+    ,'osaka2.png'
+    ,'shibuya1.png'
+    ,'shibuya2.png'
+    ,'shinjuku1.png'
+    ,'shinjuku2.png'
+    ,'yokohama1.png'
+    ,'yokohama2.png'
 ]
 
 
@@ -98,10 +105,10 @@ def preprocess_image(image_cv):
     else:  # 通常の3チャンネル（RGB）の場合
         gray = cv2.cvtColor(image_cv, cv2.COLOR_RGB2GRAY)
 
-    gray = cv2.GaussianBlur(gray, (3, 3), 0)  # ノイズ除去
+    gray = cv2.GaussianBlur(gray, (1, 1), 0)  # ノイズ除去
     return gray
 
-
+countaaa = 0
 # テンプレート画像の読み込み（拡張子を除いた名前をキーにする）
 templates = {path.rsplit(".", 1)[0]: preprocess_image(cv2.imread(path, -1)) for path in template_paths}
 def match_canvas_with_templates(driver, templates):
@@ -119,14 +126,13 @@ def match_canvas_with_templates(driver, templates):
         os.makedirs("matched_raw")
 
     for index, canvas in enumerate(canvas_elements):
-        print(index)
         try:
             width = int(canvas.get_attribute("width"))
             height = int(canvas.get_attribute("height"))
 
             if width == 170 and height >= 14:
                 driver.execute_script("arguments[0].scrollIntoView();", canvas)
-                time.sleep(1)  # スクロール後のレンダリング待機
+                time.sleep(0.1)  # スクロール後のレンダリング待機
 
                 # JavaScriptで canvas の内容を取得
                 data_url = driver.execute_script(
@@ -135,7 +141,7 @@ def match_canvas_with_templates(driver, templates):
                 image_data = base64.b64decode(data_url)
                 image = Image.open(io.BytesIO(image_data))
 
-                # # 生の画像を保存 (ここで追加した処理)
+                # 生の画像を保存 (ここで追加した処理)
                 # raw_image_path = f"matched_raw/raw_image_{index+1}.png"
                 # image.save(raw_image_path)
                 # print(f"[INFO] Raw image saved as {raw_image_path}")
@@ -158,14 +164,17 @@ def match_canvas_with_templates(driver, templates):
                 for template_name, template in templates.items():
                     if template is None:
                         continue
+                    global countaaa
 
                     res = cv2.matchTemplate(image_cv, template, cv2.TM_CCOEFF_NORMED)
+                    # cv2.imwrite(f"temp/image_cv{countaaa}.png", image_cv)
+                    # cv2.imwrite(f"temp/template{countaaa}.png", template)
+                    countaaa+=1
                     max_score = np.max(res)  # 最大の類似度を取得
                     if max_score > best_match_score:
                         best_match_score = max_score
                         best_match_name = template_name
                 print(best_match_name, best_match_score)
-                print()
                 # 最も類似したテンプレートのみカウント
                 if best_match_name:
                     matched_counts[best_match_name] += 1
@@ -233,13 +242,28 @@ def get_victory_count(url):
 
     driver.quit()
     print(theater_name, result)
-    return theater_name, result
+    tmp = {division:0 for division in divisions}
+    for key, val in result.items():
+        if 'ikebukuro' in key:
+            tmp['Buster Bros!!!'] += val
+        if 'yokohama' in key:
+            tmp['MAD TRIGGER CREW'] += val
+        if 'shibuya' in key:
+            tmp['Fling Posse'] += val
+        if 'shinjuku' in key:
+            tmp['麻天狼'] += val
+        if 'osaka' in key:
+            tmp['どついたれ本舗'] += val
+        if 'nagoya' in key:
+            tmp['Bad Ass Temple'] += val
+        if 'chuou' in key:
+            tmp['言の葉党'] += val
 
     
+    return theater_name, tmp
+
 def get_theater_list():
-    shinjuku_9 = {'/voting-status/cinema/#N9C6B00698036': '/voting-status/cinema/#N9C6B006CB0AB',
-                  '/voting-status/cinema/#N9C6B006977A3': '/voting-status/cinema/#N9C6B00698036',
-                  }
+    shinjuku_9 = {}
     response = requests.get('https://hypnosismic-movie.com/voting-status/')
     response.encoding = 'utf-8'  # 文字エンコーディングを指定
     html_data = response.text
@@ -267,3 +291,4 @@ with open(output_file, mode="w", newline="", encoding="utf-8") as file:
                 time.sleep(1)
                 theater_name,battle_results = get_victory_count(link)
                 writer.writerow([japan_prefectures[region], japan_prefectures[prefecture], theater_name] + [battle_results.get(division, 0) for division in divisions] + [link])
+
