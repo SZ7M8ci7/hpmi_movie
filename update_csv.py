@@ -180,52 +180,57 @@ def match_canvas_with_templates(driver, templates):
         except Exception as e:
             print(f"[ERROR] Failed to process canvas: {e}")
 
-    # 一覧画像の作成
-    if matched_images:
-        width, height = matched_images[0].size
-        total_height = height * len(matched_images)
-        combined_image = Image.new("RGB", (width, total_height))
+    # # 一覧画像の作成
+    # if matched_images:
+    #     width, height = matched_images[0].size
+    #     total_height = height * len(matched_images)
+    #     combined_image = Image.new("RGB", (width, total_height))
 
-        y_offset = 0
-        for img in matched_images:
-            combined_image.paste(img, (0, y_offset))
-            y_offset += height
+    #     y_offset = 0
+    #     for img in matched_images:
+    #         combined_image.paste(img, (0, y_offset))
+    #         y_offset += height
 
-        combined_image.save("matched_results/matched_overview.png")
-        print("[INFO] Matched result overview saved as matched_results/matched_overview.png")
+    #     combined_image.save("matched_results/matched_overview.png")
+    #     print("[INFO] Matched result overview saved as matched_results/matched_overview.png")
 
     return dict(matched_counts)
-
+MAX_RETRIES = 3
 def get_victory_count(url):
     options = Options()
     options.headless = True
     options.add_argument('--headless')
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=options)
-    
+
     driver.get('https://hypnosismic-movie.com' + url)
     time.sleep(2)
     html_data = driver.page_source
 
-    # BeautifulSoupでHTMLを解析
     soup = BeautifulSoup(html_data, 'html.parser')
-    # 劇場名を取得
     theater_name = soup.find('p', class_='theater--name').get_text(strip=True)
-    
-    try:
-        past_results_button = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//span[text()='PAST RESULTS']"))
-        )
-        past_results_button.click()
-        time.sleep(3)
-    except:
-        print("[ERROR] PAST RESULTS ボタンが見つかりませんでした")
+
+    retry_count = 0
+    while retry_count < MAX_RETRIES:
+        try:
+            past_results_button = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, "//span[text()='PAST RESULTS']"))
+            )
+            past_results_button.click()
+            time.sleep(3)
+            break  # 成功したらループを抜ける
+        except:
+            retry_count += 1
+            print(f"[WARNING] PAST RESULTS ボタンが見つかりませんでした。リトライ回数: {retry_count}")
+            time.sleep(2)
+
+    if retry_count == MAX_RETRIES:
+        print("[ERROR] 最大リトライ回数に達しました。処理を終了します。")
         driver.quit()
         return {}
 
-    # キャンバス画像取得 & テンプレートマッチング
     result = match_canvas_with_templates(driver, templates)
-    
+
     driver.quit()
     print(theater_name, result)
     return theater_name, result
