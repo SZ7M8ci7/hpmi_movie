@@ -2,3 +2,7 @@ beautifulsoup4 == 4.11.1
 requests == 2.27.1
 selenium
 webdriver_manager
+chromedriver-binary
+numpy
+opencv-python
+pillow
