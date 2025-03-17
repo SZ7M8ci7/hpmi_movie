@@ -217,7 +217,7 @@ def get_victory_count(url):
             EC.element_to_be_clickable((By.XPATH, "//span[text()='PAST RESULTS']"))
         )
         past_results_button.click()
-        time.sleep(2)
+        time.sleep(3)
     except:
         print("[ERROR] PAST RESULTS ボタンが見つかりませんでした")
         driver.quit()
