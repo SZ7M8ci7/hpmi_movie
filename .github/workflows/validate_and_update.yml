@@ -29,5 +29,5 @@ jobs:
     - name: Commit and Push changes
       uses: stefanzweifel/git-auto-commit-action@v5
       with:
-        commit_message: "Update battle_result.csv"
-        file_pattern: 'battle_result.csv'
+        commit_message: "Update battle_results.csv"
+        file_pattern: 'battle_results.csv'
