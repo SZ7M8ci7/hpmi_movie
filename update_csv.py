@@ -1,13 +1,23 @@
 from collections import Counter, defaultdict
+import io
 import re
 import time
 from bs4 import BeautifulSoup
+import numpy as np
 import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
-import chromedriver_binary
+import cv2
+import os
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageOps
+import base64
+# import chromedriver_binary
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
     'Referer': 'https://hypnosismic-movie.com',
@@ -62,66 +72,163 @@ japan_prefectures = {
     "toyama": "富山",
     "yamanashi": "山梨"
 }
+# 7種類のテンプレート画像のパスを設定
+template_paths = [
+    "Buster Bros!!!.png",
+    "MAD TRIGGER CREW.png",
+    "Fling Posse.png",
+    "麻天狼.png",
+    "どついたれ本舗.png",
+    "Bad Ass Temple.png",
+    "言の葉党.png",
+]
 
-def count_distinct(data):
-    entries = re.split(r'(\d{4}\.\d{2}\.\d{2})', data)[1:]
-    past_data_str = ""
-    battle_results_distinct = defaultdict(int)
-    for i in range(0, len(entries), 2):
-        date = entries[i].strip()
-        match_data = entries[i + 1].strip()
-        # Splitting match data based on teams (assuming teams have non-numeric names)
-        match_entries = re.findall(r'([^\d%]+)([\d%]+)', match_data)
 
-        for team, scores in match_entries:
-            scores = [str(x.strip('%')) for x in scores.split('%') if x]
-            if past_data_str == "".join([date, team.strip()] + scores):
-                continue
-            past_data_str = "".join([date, team.strip()] + scores)
-            battle_results_distinct[team.strip()] += 1
-    print(battle_results_distinct)
-    return battle_results_distinct
+def preprocess_image(image_cv):
+    """透明背景に白文字の画像を適切に前処理する"""
+    if image_cv is None:
+        return None
+
+    # 画像がすでにグレースケール（1チャンネル）の場合、変換不要
+    if len(image_cv.shape) == 2:
+        gray = image_cv
+    elif image_cv.shape[-1] == 4:  # RGBA画像（透明チャンネル付き）
+        alpha_channel = image_cv[:, :, 3]  # アルファチャンネル（透明度）
+        gray = cv2.bitwise_not(alpha_channel)  # 透明部分を黒、文字部分を白に変換
+    else:  # 通常の3チャンネル（RGB）の場合
+        gray = cv2.cvtColor(image_cv, cv2.COLOR_RGB2GRAY)
+
+    gray = cv2.GaussianBlur(gray, (3, 3), 0)  # ノイズ除去
+    return gray
+
+
+# テンプレート画像の読み込み（拡張子を除いた名前をキーにする）
+templates = {path.rsplit(".", 1)[0]: preprocess_image(cv2.imread(path, -1)) for path in template_paths}
+def match_canvas_with_templates(driver, templates):
+    """ キャンバスの画像を取得し、テンプレートとマッチングして結果を辞書で返す """
+    canvas_elements = driver.find_elements(By.TAG_NAME, "canvas")
+    print(f"[DEBUG] Found {len(canvas_elements)} total canvas elements")
+
+    matched_counts = Counter()
+    matched_images = []
+
+    # 保存用フォルダを準備
+    if not os.path.exists("matched_results"):
+        os.makedirs("matched_results")
+    if not os.path.exists("matched_raw"):
+        os.makedirs("matched_raw")
+
+    for index, canvas in enumerate(canvas_elements):
+        try:
+            width = int(canvas.get_attribute("width"))
+            height = int(canvas.get_attribute("height"))
+
+            if width == 170 and height >= 14:
+                driver.execute_script("arguments[0].scrollIntoView();", canvas)
+                time.sleep(2)  # スクロール後のレンダリング待機
+
+                # JavaScriptで canvas の内容を取得
+                data_url = driver.execute_script(
+                    "return arguments[0].toDataURL('image/png').substring(22);", canvas
+                )
+                image_data = base64.b64decode(data_url)
+                image = Image.open(io.BytesIO(image_data))
+
+                # # 生の画像を保存 (ここで追加した処理)
+                # raw_image_path = f"matched_raw/raw_image_{index+1}.png"
+                # image.save(raw_image_path)
+                # print(f"[INFO] Raw image saved as {raw_image_path}")
+
+                # 透過背景があるかチェック
+                if image.mode == "RGBA":
+                    alpha = image.getchannel("A")  # アルファチャンネルを取得
+                    gray = ImageOps.invert(alpha)  # 透明部分を黒、文字部分を白に変換
+                else:
+                    gray = image.convert("L")  # 通常のグレースケール変換
+
+                # OpenCVの形式に変換
+                image_cv = np.array(gray)
+                image_cv = preprocess_image(image_cv)
+
+                # 最も類似度が高いテンプレートを見つける
+                best_match_name = None
+                best_match_score = -1  # 初期値を小さくしておく
+
+                for template_name, template in templates.items():
+                    if template is None:
+                        continue
+
+                    res = cv2.matchTemplate(image_cv, template, cv2.TM_CCOEFF_NORMED)
+                    max_score = np.max(res)  # 最大の類似度を取得
+                    print(template_name, max_score)
+                    if max_score > best_match_score:
+                        best_match_score = max_score
+                        best_match_name = template_name
+                print()
+                # 最も類似したテンプレートのみカウント
+                if best_match_name:
+                    matched_counts[best_match_name] += 1
+
+                    # 画像にラベルを追加
+                    draw = ImageDraw.Draw(image)
+                    font = ImageFont.load_default()  # デフォルトフォント
+                    draw.text((5, 0), f"{best_match_name} ({best_match_score:.2f})", fill=(255, 0, 0), font=font)
+
+                    matched_images.append(image)
+
+        except Exception as e:
+            print(f"[ERROR] Failed to process canvas: {e}")
+
+    # 一覧画像の作成
+    if matched_images:
+        width, height = matched_images[0].size
+        total_height = height * len(matched_images)
+        combined_image = Image.new("RGB", (width, total_height))
+
+        y_offset = 0
+        for img in matched_images:
+            combined_image.paste(img, (0, y_offset))
+            y_offset += height
+
+        combined_image.save("matched_results/matched_overview.png")
+        print("[INFO] Matched result overview saved as matched_results/matched_overview.png")
+
+    return dict(matched_counts)
 
 def get_victory_count(url):
-    
     options = Options()
-    options.headless = True  # ヘッドレスモードで実行
-
+    options.headless = True
     options.add_argument('--headless')
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=options)
-    # URLにアクセス
+    
     driver.get('https://hypnosismic-movie.com' + url)
     time.sleep(3)
     html_data = driver.page_source
+
     # BeautifulSoupでHTMLを解析
     soup = BeautifulSoup(html_data, 'html.parser')
     # 劇場名を取得
     theater_name = soup.find('p', class_='theater--name').get_text(strip=True)
-    # すべての要素を取得
-    elements = driver.find_elements("css selector", "*")
-
-    # 疑似要素 `::before` の content を取得
-    content_list = []
-    for element in elements:
-        content = driver.execute_script(
-            "return window.getComputedStyle(arguments[0], '::before').content;", element
+    
+    try:
+        past_results_button = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//span[text()='PAST RESULTS']"))
         )
-        if content and content != 'none':  # 無効なものは除外
-            content = content.strip('"')  # 余分な `" "` を削除
+        past_results_button.click()
+        time.sleep(2)
+    except:
+        print("[ERROR] PAST RESULTS ボタンが見つかりませんでした")
+        driver.quit()
+        return {}
 
-            # Unicode 制御文字の正規表現
-            control_chars_pattern = re.compile(r'[\u200b-\u200f\u2060-\u206f]')
-
-            # 制御文字を削除
-            content = control_chars_pattern.sub('', content)
-            content_list.append(content)
-
-    # 出現回数をカウント
-    content_counts = Counter(content_list)
+    # キャンバス画像取得 & テンプレートマッチング
+    result = match_canvas_with_templates(driver, templates)
     
     driver.quit()
-    return theater_name,content_counts
+    print(theater_name, result)
+    return theater_name, result
+
     
 def get_theater_list():
     shinjuku_9 = {'/voting-status/cinema/#N9C6B00698036': '/voting-status/cinema/#N9C6B006CB0AB'}
@@ -143,7 +250,7 @@ def get_theater_list():
 regions_links = get_theater_list()
 import csv
 
-output_file = "battle_results.csv"
+output_file = "battle_results_temp.csv"
 with open(output_file, mode="w", newline="", encoding="utf-8") as file:
     writer = csv.writer(file)
     for region, prefectures in regions_links.items():
@@ -152,4 +259,3 @@ with open(output_file, mode="w", newline="", encoding="utf-8") as file:
                 time.sleep(1)
                 theater_name,battle_results = get_victory_count(link)
                 writer.writerow([japan_prefectures[region], japan_prefectures[prefecture], theater_name] + [battle_results.get(division, 0) for division in divisions] + [link])
-                
