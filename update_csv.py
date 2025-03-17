@@ -237,7 +237,9 @@ def get_victory_count(url):
 
     
 def get_theater_list():
-    shinjuku_9 = {'/voting-status/cinema/#N9C6B00698036': '/voting-status/cinema/#N9C6B006CB0AB'}
+    shinjuku_9 = {'/voting-status/cinema/#N9C6B00698036': '/voting-status/cinema/#N9C6B006CB0AB',
+                  '/voting-status/cinema/#N9C6B006977A3': '/voting-status/cinema/#N9C6B00698036',
+                  }
     response = requests.get('https://hypnosismic-movie.com/voting-status/')
     response.encoding = 'utf-8'  # 文字エンコーディングを指定
     html_data = response.text
