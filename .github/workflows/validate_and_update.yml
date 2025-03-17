@@ -1,0 +1,33 @@
+name: Validate and Update CSV
+
+on:
+  schedule:
+    - cron: '50 19 * * *'
+  workflow_dispatch:
+
+jobs:
+  validate-and-update:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pandas
+    
+    - name: Validate and update CSV
+      run: |
+        python validate_and_update.py
+
+    - name: Commit and Push changes
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: "Update battle_result.csv"
+        file_pattern: 'battle_result.csv'

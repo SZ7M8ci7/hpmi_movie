@@ -119,13 +119,14 @@ def match_canvas_with_templates(driver, templates):
         os.makedirs("matched_raw")
 
     for index, canvas in enumerate(canvas_elements):
+        print(index)
         try:
             width = int(canvas.get_attribute("width"))
             height = int(canvas.get_attribute("height"))
 
             if width == 170 and height >= 14:
                 driver.execute_script("arguments[0].scrollIntoView();", canvas)
-                time.sleep(2)  # スクロール後のレンダリング待機
+                time.sleep(1)  # スクロール後のレンダリング待機
 
                 # JavaScriptで canvas の内容を取得
                 data_url = driver.execute_script(
@@ -203,7 +204,7 @@ def get_victory_count(url):
     driver = webdriver.Chrome(service=service, options=options)
     
     driver.get('https://hypnosismic-movie.com' + url)
-    time.sleep(3)
+    time.sleep(2)
     html_data = driver.page_source
 
     # BeautifulSoupでHTMLを解析
