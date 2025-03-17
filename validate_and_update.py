@@ -15,8 +15,8 @@ def validate_monotonic_increase(old_df, new_df):
         raise ValueError("数値が単調増加していません。")
 
 def main():
-    old_csv = "battle_result.csv"
-    temp_csv = "battle_result_temp.csv"
+    old_csv = "battle_results.csv"
+    temp_csv = "battle_results_temp.csv"
     
     old_df = load_csv(old_csv)
     new_df = load_csv(temp_csv)
