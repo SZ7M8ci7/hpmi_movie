@@ -161,10 +161,10 @@ def match_canvas_with_templates(driver, templates):
 
                     res = cv2.matchTemplate(image_cv, template, cv2.TM_CCOEFF_NORMED)
                     max_score = np.max(res)  # 最大の類似度を取得
-                    print(template_name, max_score)
                     if max_score > best_match_score:
                         best_match_score = max_score
                         best_match_name = template_name
+                print(best_match_name, best_match_score)
                 print()
                 # 最も類似したテンプレートのみカウント
                 if best_match_name:
