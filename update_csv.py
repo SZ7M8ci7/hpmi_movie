@@ -172,7 +172,9 @@ def match_canvas_with_templates(driver, templates):
                         best_match_name = template_name
                 if best_match_score < 0.6:
                     countaaa+=1
-                    cv2.imwrite(f"temp/image_cv{countaaa}.png", image_cv)
+                    raw_image_path = f"temp/raw_image_{countaaa+1}.png"
+                    image.save(raw_image_path)
+                    # cv2.imwrite(f"temp/image_cv{countaaa}.png", image_cv)
                     print(best_match_name, best_match_score, countaaa)
                 # 最も類似したテンプレートのみカウント
                 if best_match_name:

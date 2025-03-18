@@ -2,7 +2,7 @@ name: Validate and Update CSV
 
 on:
   schedule:
-    - cron: '50 19 * * *'
+    - cron: '50 20 * * *'
   workflow_dispatch:
 
 jobs:
