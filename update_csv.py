@@ -114,7 +114,6 @@ templates = {path.rsplit(".", 1)[0]: preprocess_image(cv2.imread(path, -1)) for 
 def match_canvas_with_templates(driver, templates):
     """ キャンバスの画像を取得し、テンプレートとマッチングして結果を辞書で返す """
     canvas_elements = driver.find_elements(By.TAG_NAME, "canvas")
-    print(f"[DEBUG] Found {len(canvas_elements)} total canvas elements")
 
     matched_counts = Counter()
     matched_images = []
@@ -167,14 +166,14 @@ def match_canvas_with_templates(driver, templates):
                     global countaaa
 
                     res = cv2.matchTemplate(image_cv, template, cv2.TM_CCOEFF_NORMED)
-                    # cv2.imwrite(f"temp/image_cv{countaaa}.png", image_cv)
-                    # cv2.imwrite(f"temp/template{countaaa}.png", template)
-                    countaaa+=1
                     max_score = np.max(res)  # 最大の類似度を取得
                     if max_score > best_match_score:
                         best_match_score = max_score
                         best_match_name = template_name
-                print(best_match_name, best_match_score)
+                if best_match_score < 0.6:
+                    countaaa+=1
+                    cv2.imwrite(f"temp/image_cv{countaaa}.png", image_cv)
+                    print(best_match_name, best_match_score, countaaa)
                 # 最も類似したテンプレートのみカウント
                 if best_match_name:
                     matched_counts[best_match_name] += 1
@@ -281,7 +280,6 @@ def get_theater_list():
     return regions_links
 regions_links = get_theater_list()
 import csv
-
 output_file = "battle_results_temp.csv"
 with open(output_file, mode="w", newline="", encoding="utf-8") as file:
     writer = csv.writer(file)
