@@ -76,18 +76,25 @@ japan_prefectures = {
 template_paths = [
     'chuou1.png'
     ,'chuou2.png'
+    ,'chuou3.png'
     ,'ikebukuro1.png'
     ,'ikebukuro2.png'
+    ,'ikebukuro3.png'
     ,'nagoya1.png'
     ,'nagoya2.png'
+    ,'nagoya3.png'
     ,'osaka1.png'
     ,'osaka2.png'
+    ,'osaka3.png'
     ,'shibuya1.png'
     ,'shibuya2.png'
+    ,'shibuya3.png'
     ,'shinjuku1.png'
     ,'shinjuku2.png'
+    ,'shinjuku3.png'
     ,'yokohama1.png'
     ,'yokohama2.png'
+    ,'yokohama3.png'
 ]
 
 
@@ -173,7 +180,7 @@ def match_canvas_with_templates(driver, templates):
                 if best_match_score < 0.6:
                     countaaa+=1
                     raw_image_path = f"temp/raw_image_{countaaa+1}.png"
-                    image.save(raw_image_path)
+                    # image.save(raw_image_path)
                     # cv2.imwrite(f"temp/image_cv{countaaa}.png", image_cv)
                     print(best_match_name, best_match_score, countaaa)
                 # 最も類似したテンプレートのみカウント
